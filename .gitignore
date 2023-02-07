@@ -1,0 +1,8 @@
+# 画像ファイルは無視
+*.png
+*.jpg
+*.mp3
+*.mp4
+*.asset
+*.meta
+*.unity
