@@ -21,16 +21,20 @@ public class CondApp : ScriptableObject
     public enum CondAppType
     {
         BONUS,
+        JAC,
         REPLAY,
-        WIN
+        WIN,
+        LOSE
     }
 
     //図柄パターンのリスト
     [SerializeField]
-    private List<SymPatternList> symPattern = new List<SymPatternList>();
+    public List<SymPatternList> symPattern = new List<SymPatternList>();
     public string condappName;
     public CondAppType condappType;
     public List<int> payoutList = new List<int>();
     public int maxJac;
     public int maxMinorGame;
+    public int maxjacwin;
+    public int maxjacgame;
 }
