@@ -49,7 +49,7 @@ public class DamageEff : MonoBehaviour
         //1•b‚ÅŽ€‚Ê
         nowtimer -= Time.deltaTime;
         if (nowtimer >= 0.6f) {
-            this.transform.Translate(0, (-0.8f + nowtimer) / 30, 0);
+            this.transform.Translate(0, (-0.8f + nowtimer) / 20, 0);
         }
         else if (nowtimer <= 0)
         {

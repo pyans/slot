@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "CondAppDataBase", menuName = "MyScriptable/CreateCondAppDataBase")]
+[CreateAssetMenu(fileName = "CondAppDataBase", menuName = "MyScriptable//DataBaseCreateCondAppDataBase")]
 public class CondAppDataBase : ScriptableObject
 {
 

@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "AudioDataBase", menuName = "MyScriptable/AudioDataBase")]
+[CreateAssetMenu(fileName = "AudioDataBase", menuName = "MyScriptable/Create AudioDataBase")]
 public class Sounds : ScriptableObject
 {
     public List<AudioClip> SEList = new List<AudioClip>();
