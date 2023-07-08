@@ -112,15 +112,25 @@ public class Lottery
             //再遊技
             index = 1;
         }
-        if ((hittype & (int)(CondAppGroup.CondAppGroupTag.RARE & CondAppGroup.CondAppGroupTag.CHERRY)) != 0)
+        if ((hittype ^ (int)(CondAppGroup.CondAppGroupTag.RARE | CondAppGroup.CondAppGroupTag.CHERRY)) == 0)
         {
             //弱チェリー
             index = 2;
         }
-        if ((hittype & (int)(CondAppGroup.CondAppGroupTag.RARE & CondAppGroup.CondAppGroupTag.WTML)) != 0)
+        if ((hittype ^ (int)(CondAppGroup.CondAppGroupTag.RARE | CondAppGroup.CondAppGroupTag.WTML)) == 0)
         {
             //弱スイカ
             index = 3;
+        }
+        if ((hittype ^ (int)(CondAppGroup.CondAppGroupTag.SR | CondAppGroup.CondAppGroupTag.CHERRY)) == 0)
+        {
+            //強チェリー
+            index = 4;
+        }
+        if ((hittype ^ (int)(CondAppGroup.CondAppGroupTag.SR | CondAppGroup.CondAppGroupTag.BELL)) == 0)
+        {
+            //チャンスベル
+            index = 5;
         }
 
         //抽せん実行

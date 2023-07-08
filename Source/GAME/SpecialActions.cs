@@ -18,12 +18,12 @@ public class SpecialActions
         TeamList = tl;
         EnemyList = el;
     }
-    public void SPActSelect(Status st, CondAppGroup hitminor, int specialid)
+    public void SPActSelect(Character chr, CondAppGroup hitminor, int specialid)
     {
         //ƒƒ\ƒbƒh‚ğæ“¾
         MethodInfo mi = (this.GetType()).GetMethod("SPAct_" + specialid);
         //Invoke‚Åƒƒ\ƒbƒhŒÄ‚Ño‚µ
-        mi.Invoke(this, new object[] { st, hitminor });
+        mi.Invoke(this, new object[] { chr, hitminor });
     }
 
     //UŒ‚—ÍZo
@@ -32,16 +32,16 @@ public class SpecialActions
         float rate = Random.Range(-0.25f, 0.25f);
         return (int)(atk * (1.0f + rate));
     }
-    public void SPAct_0(Status st, CondAppGroup hitminor)
+    public void SPAct_0(Character chr, CondAppGroup hitminor)
     {
-        if (st.isenemy)
+        if (chr.isenemy)
         {
             //“G‚ÌUŒ‚
             foreach (Character temp in TeamList)
             {
                 if (temp != null && !temp.isdeath())
                 {
-                    temp.Damage(CulcDamage(st.attack));
+                    temp.Damage(CulcDamage(chr.attack));
                     break;
                 }
             }
@@ -53,7 +53,7 @@ public class SpecialActions
             {
                 if (temp != null && !temp.isdeath())
                 {
-                    temp.Damage(CulcDamage(st.attack));
+                    temp.Damage(CulcDamage(chr.attack));
                     break;
 
                 }
@@ -61,34 +61,35 @@ public class SpecialActions
         }
     }
 
-    public void SPAct_1(Status st, CondAppGroup hitminor)
+    public void SPAct_1(Character chr, CondAppGroup hitminor)
     {
         //‹­‰»UŒ‚(ålŒö—p)
-        //ƒXƒe[ƒ^ƒX‹­‰»—p
-        Status powup = st.StatusCopy();
-        
+        //Œ»óˆê“I‚ÉUŒ‚—Í‚ğã‚°‚éŒ`‚ÅÀ‘•
+        int tmp = chr.attack;
+
         switch (hitminor.name)
         {
             case "BELL":
                 //2‰ñUŒ‚
-                for (int i = 0; i < 2; i++) SPAct_0(st, hitminor);
+                for (int i = 0; i < 2; i++) SPAct_0(chr, hitminor);
                 break;
             case "CHERRY_WEAK":
                 //’P‘Ì‹­UŒ‚
-                powup.attack *= 8;
-                SPAct_0(powup, hitminor);
+                chr.attack *= 8;
+                SPAct_0(chr, hitminor);
+                chr.attack = tmp;
                 break;
             case "WTML_WEAK":
                 //‘S‘ÌUŒ‚
-                powup.attack *= 4;
-                if (st.isenemy)
+                chr.attack *= 4;
+                if (chr.isenemy)
                 {
                     //“G‚ÌUŒ‚
                     foreach (Character temp in TeamList)
                     {
                         if (temp != null && !temp.isdeath())
                         {
-                            temp.Damage(CulcDamage(powup.attack));
+                            temp.Damage(CulcDamage(chr.attack));
                         }
                     }
                 }
@@ -99,15 +100,18 @@ public class SpecialActions
                     {
                         if (temp != null && !temp.isdeath())
                         {
-                            temp.Damage(CulcDamage(powup.attack));
+                            temp.Damage(CulcDamage(chr.attack));
                         }
                     }
                 }
+                chr.attack = tmp;
                 break;
             default:
                 //‚½‚¾‚Ì’ÊíUŒ‚
-                SPAct_0(st, hitminor);
+                SPAct_0(chr, hitminor);
                 break;
         }
+        //UŒ‚—Í‚ğŒ³‚É–ß‚·
+        chr.attack = tmp;
     }
 }

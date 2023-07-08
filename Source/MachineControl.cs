@@ -135,6 +135,9 @@ public class MachineControl : MonoBehaviour
     //ゲームスクリプト
     public GameMaster gameMaster;
 
+    //デバッグ用変数
+    public CondAppGroup force_activeCondAppGroup; //強制作動条件装置
+
     public void InputOrder(int reelnum)
     {
         //停止順を更新(すごく適当なのでバグに注意)
@@ -293,6 +296,11 @@ public class MachineControl : MonoBehaviour
                 {
                     //内部抽選
                     activeCondAppGroup = lotteryCode.MainLottery(setting);
+                    if(force_activeCondAppGroup != null)
+                    {
+                        //デバッグ:当選条件装置の書き換え
+                        activeCondAppGroup = force_activeCondAppGroup;
+                    }
                     //ゲーム部分の抽選
                     //gameMaster.LotBFGame(activeCondAppGroup, lotteryCode);
                     //ART抽せん
@@ -306,6 +314,7 @@ public class MachineControl : MonoBehaviour
                             if (czhit != 0)
                             {
                                 //CZ前半へ
+                                Debug.Log("CZ当選:内容:" + czhit);
                                 nextatstate = ATMODE.CZ_PND;
                             }
                             if (zen_game1 != 0) Debug.Log("前兆突入！：ゲーム数：" + zen_game1);
@@ -424,6 +433,7 @@ public class MachineControl : MonoBehaviour
                     foreach(CondApp condapp in activeCondAppGroup.CondApps)
                     {
                         CondApp winCondApp = null;
+                        SymbolsData sym;
                         foreach (CondApp.SymPatternList symlist in condapp.symPattern)
                         {
                             //図柄一致フラグ
@@ -431,7 +441,7 @@ public class MachineControl : MonoBehaviour
                             for (int i = 0; i< windowsize; i++)
                             {
                                 //図柄を確認
-                                SymbolsData sym = reel[i].reelsymbol[reel[i].posculc(reel[i].reelpos - 1 + line.List[i])];
+                                sym = reel[i].reelsymbol[reel[i].posculc(reel[i].reelpos - 1 + line.List[i])];
                                 //メタシンボルは判定をスキップ
                                 if (symlist.List[i] == metaSymbol)
                                 {
@@ -466,7 +476,7 @@ public class MachineControl : MonoBehaviour
                             {
                                 //再遊技フラグをON
                                 isreplay = true;
-                            }
+                             }
                             //勝ち取り役が役連の場合
                             else if (winCondApp.condappType == CondApp.CondAppType.BONUS)
                             {
@@ -518,6 +528,8 @@ public class MachineControl : MonoBehaviour
                         }
                     }
                 }
+
+                //RT遷移チェック
 
                 //払い出し枚数の上限をチェック
                 if (payout > payoutmax)

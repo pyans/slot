@@ -17,10 +17,12 @@ public class Player : Character
         {
             //レベルアップ
             Lv++;
-            Status temp = this.GetStatus();
-            temp.attack += 1;
-            temp.hp += 4 + (Lv % 3);
-            this.SetStatus(temp);
+            //ステデータを更新
+            this.GetStatus().attack += 1;
+            this.GetStatus().hp += 4 + (Lv % 3);
+            //実ステータスに反映
+            hp += 4 + (Lv % 3);
+            attack = this.GetStatus().attack;
         }
     }
 

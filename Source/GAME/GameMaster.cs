@@ -160,15 +160,17 @@ public class GameMaster : MonoBehaviour
         //キャラリストに彫り込む
         CharacterList.Add(newchara);
         
-        if (status.isenemy)
+        if (posindx < 9)
         {
             //敵の場合
+            newchara.isenemy = true;
             EnemyList.Add(newchara);
             
         }
         else
         {
             //味方の場合
+            newchara.isenemy = false;
             TeamList.Add(newchara);
         }
 
@@ -214,7 +216,7 @@ public class GameMaster : MonoBehaviour
         //初期状態設定
         videoGameState = VideoGameState.STANDBY;
 
-        stdisp.RenewST(player.GetLevel(), player.GetStatus().hp, 999);
+        stdisp.RenewST(player.GetLevel(), player.hp, player.GetStatus().hp);
     }
 
     public void LotBFGame(CondAppGroup hitminor, Lottery lottery)
@@ -306,12 +308,12 @@ public class GameMaster : MonoBehaviour
                     if (ActorList[0].Action())
                     {
                         //特技使用
-                        spact.SPActSelect(ActorList[0].GetStatus(), condappGroup, ActorList[0].GetStatus().skill.id);
+                        spact.SPActSelect(ActorList[0], condappGroup, ActorList[0].GetStatus().skill.id);
                     }
                     else
                     {
                         //通常攻撃
-                        spact.SPAct_0(ActorList[0].GetStatus(), condappGroup);
+                        spact.SPAct_0(ActorList[0], condappGroup);
                     }
                     // 行動したものは削除
                     ActorList.RemoveAt(0);
@@ -357,8 +359,8 @@ public class GameMaster : MonoBehaviour
                 }
                 break;
             case VideoGameState.CLEANUP:
-                int dummymaxhp = 999;       //maxhpが参照できない
-                stdisp.RenewST(player.GetLevel(), player.GetStatus().hp, dummymaxhp);      
+                //ステータス情報の更新
+                stdisp.RenewST(player.GetLevel(), player.hp, player.GetStatus().hp);      
                 break;
             default:
                 break;

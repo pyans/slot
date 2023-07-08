@@ -6,9 +6,18 @@ public class Character : MonoBehaviour
 {
     [SerializeField]
     protected Status status;
+    //戦闘用現在ステータス
+    public int hp;
+    public int attack;
+    public int defence;
     public int waitcount;
     public int randmax = 256;
     public int posindex;
+
+    //敵味方フラグ
+    public bool isenemy;
+    //特性、状態異常
+    public int statusFlug;
 
     public void SetStatus(Status setstatus)
     {
@@ -17,6 +26,11 @@ public class Character : MonoBehaviour
         status = setstatus.StatusCopy();
         SetSprite();
         waitcount = status.firstwait;
+
+        //初期化
+        hp = setstatus.hp;
+        attack = setstatus.attack;
+        defence = setstatus.defence;
     }
 
     public Status GetStatus()
@@ -49,9 +63,9 @@ public class Character : MonoBehaviour
     public void Damage(int damage)
     {
         //守備力による減算
-        int lastdamage = Mathf.Max(0, damage - status.diffence);
+        int lastdamage = Mathf.Max(0, damage - defence);
         //ダメージを受ける
-        status.hp -= lastdamage;
+        hp = Mathf.Max(0, hp - lastdamage);
 
         //ダメージ表示
         GameObject obj = Resources.Load<GameObject>("GAME/UI_GPX/DamageEff");
@@ -59,16 +73,16 @@ public class Character : MonoBehaviour
         newobj.GetComponent<DamageEff>().MyStart(lastdamage);
 
         //HP0なら死亡
-        if(status.hp <= 0)
+        if(hp <= 0)
         {
-            status.statusFlug = status.statusFlug | (int)Status.BADSTATUS.DEATH;
+            statusFlug = statusFlug | (int)Status.BADSTATUS.DEATH;
         }
     }
 
     public bool isdeath()
     {
         //死亡確認
-        return (status.statusFlug & (int)Status.BADSTATUS.DEATH) != 0;
+        return (statusFlug & (int)Status.BADSTATUS.DEATH) != 0;
     }
 
     //行動待機カウントの増減

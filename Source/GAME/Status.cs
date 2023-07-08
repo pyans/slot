@@ -9,7 +9,7 @@ public class Status : ScriptableObject
     public string c_name;
     public int hp;
     public int attack;
-    public int diffence;
+    public int defence;
     public int firstwait;
     //種別設定
     public enum WHO
@@ -26,13 +26,10 @@ public class Status : ScriptableObject
     }
 
     public WHO whoAreYou;
-    //敵味方フラグ
-    public bool isenemy;
 
     public Action skill;//特殊行動
     public int skillLot;    //特技使用率
-    //特性、状態異常
-    public int statusFlug;
+    
     //グラ
     public Sprite sprite;
     //経験値
