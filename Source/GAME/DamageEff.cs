@@ -7,6 +7,7 @@ public class DamageEff : MonoBehaviour
     // Start is called before the first frame update
     public float Timer = 1.0f;
     float nowtimer = 200.0f;
+    bool healFlg = false;
 
     List<int> dispnum(int num)
     {
@@ -21,8 +22,18 @@ public class DamageEff : MonoBehaviour
         return value;
     }
 
+    public void HealStart(int damage)
+    {
+        healFlg = true;
+        MyStart(damage);
+    }
+
     public void MyStart(int damage)
     {
+
+        //ランダム位置変更
+        this.transform.Translate(Random.Range(-1.0f, 1.0f), Random.Range(-1.0f, 1.0f), 0);
+
         //タイマー設定
         nowtimer = Timer;
         //数字オブジェクト製作
@@ -33,7 +44,9 @@ public class DamageEff : MonoBehaviour
         foreach (int onenum in numlist)
         {
             GameObject obj = Resources.Load<GameObject>("GAME/UI_GPX/num_" + onenum);
-            Instantiate(obj, this.transform.position + new Vector3(-0.54f * i, 0, 0), Quaternion.identity, gameObject.transform);
+            GameObject newobj = Instantiate(obj, this.transform.position + new Vector3(-0.54f * i, 0, 0), Quaternion.identity, gameObject.transform);
+            //負数なら回復扱い
+            if(healFlg)newobj.GetComponent<SpriteRenderer>().color = new Color32(0, 255, 0, 255);
             i++;
         }
     }

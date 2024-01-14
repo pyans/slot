@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "CondAppDataBase", menuName = "MyScriptable/Game/CreateStopDataBase")]
+[CreateAssetMenu(fileName = "CondAppDataBase", menuName = "MyScriptable/DataBase/CreateStopDataBase")]
 public class StopDataBase : ScriptableObject
 {
 

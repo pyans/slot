@@ -48,8 +48,6 @@ public class Lottery
         int randnum = Random.Range(0, randmax_1B);
         foreach (int lotvalue in lotdata)
         {
-            //結果をセット
-            result++;
             //乱数から抽選データの重みを減算
             randnum -= lotvalue;
 
@@ -58,6 +56,9 @@ public class Lottery
             {
                 return result;
             }
+
+            //結果をセット(最低値は1)
+            result++;
         }
 
         return 0;

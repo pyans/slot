@@ -20,9 +20,9 @@ public class ReelScript : MonoBehaviour
     public MachineControl master;
 
     public float rollspeed = 480;
-    private bool rollstate = false;
-    private bool stopmode = false;
-    private bool standbystop = false;
+    private bool rollstate = false;     //物理的に回転しているかのフラグ
+    private bool stopmode = false;      //停止モード中(停止ボタンが押されてから回胴が止まるまで)かどうかのフラグ
+    private bool standbystop = false;   //停止ボタンが有効かどうかのフラグ
 
     //消灯テスト
     public bool isturnoff = false;
@@ -130,14 +130,6 @@ public class ReelScript : MonoBehaviour
                 //停止フラグを設定
                 stopmode = false;
                 rollstate = false;
-                //消灯
-                if (isturnoff)
-                {
-                    ReelLight.turnOFF();
-                    isturnoff = false;
-                }
-                //SE再生
-                master.SEControll(2);
             }
             else if (stoprad == 0 && nowrotate > 342)
             {
@@ -151,6 +143,12 @@ public class ReelScript : MonoBehaviour
                 //停止フラグを設定
                 stopmode = false;
                 rollstate = false;
+
+            }
+
+            if (!stopmode)
+            {
+                //共通処理
                 //消灯
                 if (isturnoff)
                 {
@@ -158,8 +156,14 @@ public class ReelScript : MonoBehaviour
                     isturnoff = false;
                 }
                 //SE再生
-                master.SEControll(2);
-
+                if (master.isTenpai() != 0)
+                {
+                    master.SEControll(4);
+                }
+                else
+                {
+                    master.SEControll(2);
+                }
             }
         }
     }

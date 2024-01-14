@@ -33,6 +33,7 @@ public class CondApp : ScriptableObject
     public string condappName;
     public CondAppType condappType;
     public List<int> payoutList = new List<int>();
+    public RTinfo gotoRT;
     public int maxJac;
     public int maxMinorGame;
     public int maxjacwin;

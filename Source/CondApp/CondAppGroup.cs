@@ -15,9 +15,10 @@ public class CondAppGroup : ScriptableObject
         RARE = 16,
         SR = 32,
         UR = 64,
-        BONUS = 128,
-        ORDER = 256
+        BONUS = 128
     };
+    //押し順
+    public int stoporder = 0;
     //条件装置群データ
     public string CondAppGroupName;
     public int typeofCondApp;                                         //条件装置群の役割(0…ハズレ、1…小役、2…レア、3…確定)
@@ -31,4 +32,49 @@ public class CondAppGroup : ScriptableObject
     //特殊停止制御
     //特定のリールが特定の位置の場合に作動
     public List<SpecialStop> specialStops = new List<SpecialStop>();
+
+    public bool isBELL()
+    {
+        return (typeofCondApp & (int)CondAppGroupTag.BELL) != 0;
+    }
+
+    public bool isREP()
+    {
+        return (typeofCondApp & (int)CondAppGroupTag.REP) != 0;
+    }
+
+    public bool isWTML()
+    {
+        return (typeofCondApp & (int)CondAppGroupTag.WTML) != 0;
+    }
+
+    public bool isCHERRY()
+    {
+        return (typeofCondApp & (int)CondAppGroupTag.CHERRY) != 0;
+    }
+
+    public bool isRARE()
+    {
+        return (typeofCondApp & (int)CondAppGroupTag.RARE) != 0;
+    }
+
+    public bool isSR()
+    {
+        return (typeofCondApp & (int)CondAppGroupTag.SR) != 0;
+    }
+
+    public bool isUR()
+    {
+        return (typeofCondApp & (int)CondAppGroupTag.UR) != 0;
+    }
+
+    public bool isBONUS()
+    {
+        return (typeofCondApp & (int)CondAppGroupTag.BONUS) != 0;
+    }
+
+    public bool isRAREtype()
+    {
+        return this.isRARE() || this.isSR() || this.isUR() || this.isBONUS();
+    }
 }

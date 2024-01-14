@@ -10,20 +10,24 @@ public class SpecialActions
     //敵及び味方のリスト
     List<Character> TeamList;
     List<Character> EnemyList;
+    //親オブジェクト
+    GameMaster context;
 
-    public SpecialActions(List<Character> cl, List<Character> tl, List<Character> el)
+    public SpecialActions(GameMaster context_p)
     {
-        //インスタンス生成時、リストをコピー
-        CharacterList = cl;
-        TeamList = tl;
-        EnemyList = el;
+        //インスタンス生成時、リストを取得
+        CharacterList = context_p.GetCharacterList();
+        TeamList = context_p.GetTeamList();
+        EnemyList = context_p.GetEnemyList();
+        //親オブジェクトの取得
+        context = context_p;
     }
-    public void SPActSelect(Character chr, CondAppGroup hitminor, int specialid)
+    public void SPActSelect(Character chr, Character target, MyAction special)
     {
         //メソッドを取得
-        MethodInfo mi = (this.GetType()).GetMethod("SPAct_" + specialid);
+        MethodInfo mi = (this.GetType()).GetMethod("SPAct_" + special.id);
         //Invokeでメソッド呼び出し
-        mi.Invoke(this, new object[] { chr, hitminor });
+        mi.Invoke(this, new object[] { chr, target });
     }
 
     //攻撃力算出
@@ -32,86 +36,132 @@ public class SpecialActions
         float rate = Random.Range(-0.25f, 0.25f);
         return (int)(atk * (1.0f + rate));
     }
-    public void SPAct_0(Character chr, CondAppGroup hitminor)
+
+    Character AutoTarget(Character chr, Character pretarget)
     {
-        if (chr.isenemy)
+        if (false/*混乱なら*/)
         {
-            //敵の攻撃
-            foreach (Character temp in TeamList)
-            {
-                if (temp != null && !temp.isdeath())
-                {
-                    temp.Damage(CulcDamage(chr.attack));
-                    break;
-                }
-            }
+
+        }
+        else if (false/*挑発状態なら*/)
+        {
+
+        }
+        else if (pretarget != null && !pretarget.isdeath())
+        {
+            //元のターゲットを攻撃
+            return pretarget;
         }
         else
         {
-            //味方の攻撃
-            foreach (Character temp in EnemyList)
+            //オートターゲット
+            if (chr.isenemy)
             {
-                if (temp != null && !temp.isdeath())
-                {
-                    temp.Damage(CulcDamage(chr.attack));
-                    break;
-
+                foreach(Character temp in TeamList){
+                    if(temp != null && !temp.isdeath())
+                    {
+                        return temp;
+                    }
                 }
+            }
+            else
+            {
+                foreach (Character temp in EnemyList)
+                {
+                    if (temp != null && !temp.isdeath())
+                    {
+                        return temp;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+    public void SPAct_0(Character chr, Character target)
+    {
+        //通常攻撃
+        Character tgt = AutoTarget(chr, target);
+        if (tgt == null) return;
+        tgt.Damage(CulcDamage(chr.attack*2));
+        
+    }
+
+    public void SPAct_1(Character chr, Character target)
+    {
+        //強化攻撃(主人公用)
+        //通常攻撃
+        Character tgt = AutoTarget(chr, target);
+        if (tgt == null) return;
+        tgt.Damage(CulcDamage(chr.attack*8));
+    }
+
+    public void SPAct_2(Character chr, Character target)
+    {
+        //強化攻撃(主人公用)
+
+        //通常攻撃
+        foreach (Character tmp in EnemyList)
+        {
+            if (tmp != null && !tmp.isdeath())
+            {
+                tmp.Damage(CulcDamage(chr.attack * 4));
             }
         }
     }
 
-    public void SPAct_1(Character chr, CondAppGroup hitminor)
+    public void SPAct_3(Character chr, Character target)
     {
-        //強化攻撃(主人公用)
-        //現状一時的に攻撃力を上げる形で実装
-        int tmp = chr.attack;
-
-        switch (hitminor.name)
-        {
-            case "BELL":
-                //2回攻撃
-                for (int i = 0; i < 2; i++) SPAct_0(chr, hitminor);
-                break;
-            case "CHERRY_WEAK":
-                //単体強攻撃
-                chr.attack *= 8;
-                SPAct_0(chr, hitminor);
-                chr.attack = tmp;
-                break;
-            case "WTML_WEAK":
-                //全体攻撃
-                chr.attack *= 4;
-                if (chr.isenemy)
-                {
-                    //敵の攻撃
-                    foreach (Character temp in TeamList)
-                    {
-                        if (temp != null && !temp.isdeath())
-                        {
-                            temp.Damage(CulcDamage(chr.attack));
-                        }
-                    }
-                }
-                else
-                {
-                    //味方の攻撃
-                    foreach (Character temp in EnemyList)
-                    {
-                        if (temp != null && !temp.isdeath())
-                        {
-                            temp.Damage(CulcDamage(chr.attack));
-                        }
-                    }
-                }
-                chr.attack = tmp;
-                break;
-            default:
-                //ただの通常攻撃
-                SPAct_0(chr, hitminor);
-                break;
-        }
-        //攻撃力を元に戻す
-        chr.attack = tmp;
+        //強化攻撃(主人公強レア用)
+        Character tgt = AutoTarget(chr, target);
+        if (tgt == null) return;
+        tgt.Damage(CulcDamage(chr.attack * 16));
     }
+
+    public void SPAct_4(Character chr, Character target)
+    {
+        //回復(主人公用)
+        chr.heal(chr.GetStatus().hp / 4);
+
+        //通常攻撃
+        Character tgt = AutoTarget(chr, target);
+        if (tgt == null) return;
+        tgt.Damage(CulcDamage(chr.attack));
+    }
+
+    public void SPAct_16(Character chr, Character target)
+    {
+        //状態異常(毒)
+        Character tgt = AutoTarget(chr, target);
+        if (tgt == null) return;
+        tgt.SetSPStatus(Status.BADSTATUS.POISON);
+    }
+
+
+    public void SPAct_64(Character chr, Character target)
+    {
+        //告知
+        //未実装
+        if (context.condappGroup.isBONUS())
+        {
+            Character tgt = AutoTarget(chr, target);
+            if (tgt == null) return;
+            tgt.koteiDamage(777);
+        }
+    }
+
+    public void SPAct_255(Character chr, Character target)
+    {
+        //敵全滅攻撃(主人公用)
+        //味方の攻撃
+        foreach (Character tmp in EnemyList)
+        {
+            if (tmp != null && !tmp.isdeath())
+            {
+                tmp.koteiDamage(9999);
+            }
+        }
+    }
+
 }
+

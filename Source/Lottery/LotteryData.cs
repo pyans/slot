@@ -19,6 +19,7 @@ public class LotteryData : ScriptableObject
     public CondApp FlagBonus;
     public CondApp ActiveCAD;
     public CondApp ActiveBonus;
+    public RTinfo RTinfo;
     //public RTid rtid;
     
     public int betlevel;

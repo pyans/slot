@@ -22,12 +22,19 @@ public class Status : ScriptableObject
     public enum BADSTATUS
     {
         DEATH = 1,
-        STONE = 2
+        STONE = 2,
+        POISON = 4,
+        PARALYSIS = 8,
+        SLEEP = 16,
+        STUN = 32,
+        DARK = 64,
+        CHARM = 128,
+        CONFUSE = 256
     }
 
     public WHO whoAreYou;
 
-    public Action skill;//特殊行動
+    public MyAction skill;//特殊行動
     public int skillLot;    //特技使用率
     
     //グラ

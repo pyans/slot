@@ -14,7 +14,7 @@ public enum ATMODE
     UWNS,
     SPBNS,
     USPBNS,
-    EN
+    END
 }
 
 public class MachineControl : MonoBehaviour
@@ -52,11 +52,15 @@ public class MachineControl : MonoBehaviour
     public Lottery lotteryCode = new Lottery();
     public LotteryDataBase lotteryDataBase;
     public List<LotteryData> lotteryDataList;
+    public MonsterTableDB monsterTableDBs;
     public SubLotDataBase subLotDataBase;
     public CondAppGroup lose;
     public SymbolsData metaSymbol;
     public CondAppDataBase condAppDataBase;
     public List<CondApp> condApps;      //作動可能性のある条件装置(デバッグのために残してあるが最終的に消す)
+
+    //演出スクリプト
+    public MovieController movieController;
 
     //リール消灯情報
     public int lightoff = 0;
@@ -81,6 +85,8 @@ public class MachineControl : MonoBehaviour
     int jacRest = 0;
     int jacWinCount = 0;
     int jacGameCount = 0;
+    //RT
+    public RTinfo RT1;
     //リール情報
     public List<ReelScript> reel = new List<ReelScript>();
     //SEリスト
@@ -89,7 +95,7 @@ public class MachineControl : MonoBehaviour
     public AudioSource audioSource;
 
     //押し順バッファ
-    public int stoporder = 123;
+    public int stoporder = 0;
     
     //作動条件装置情報
     public CondAppGroup activeCondAppGroup; //作動条件装置
@@ -137,6 +143,16 @@ public class MachineControl : MonoBehaviour
 
     //デバッグ用変数
     public CondAppGroup force_activeCondAppGroup; //強制作動条件装置
+
+    public ATMODE GetATMODE()
+    {
+        return atstate;
+    }
+
+    public void SetATMODE(ATMODE newstate)
+    {
+        atstate = newstate;
+    }
 
     public void InputOrder(int reelnum)
     {
@@ -190,6 +206,61 @@ public class MachineControl : MonoBehaviour
         audioSource.PlayOneShot((Sounds.GetSEs())[seid]);
     }
 
+    //テンパイチェック
+    public int isTenpai()
+    {
+        //第2停止以外は処理スキップ
+        if (stoporder < 10 || stoporder > 100) return 0;
+        //有効ラインをチェック
+        foreach (EffectiveLineList line in effectiveline)
+        {
+            foreach (CondApp condapp in condApps)
+            {
+                //ボーナス以外はスキップ
+                if (condapp.condappType != CondApp.CondAppType.BONUS) continue;
+                CondApp winCondApp = null;
+                SymbolsData sym;
+                foreach (CondApp.SymPatternList symlist in condapp.symPattern)
+                {
+                    //図柄一致フラグ
+                    bool iscacth = true;
+                    for (int i = 0; i < windowsize; i++)
+                    {
+                        //回転中のリールは処理をスキップ
+                        if (reel[i].GetRollState()) continue;
+                        //図柄を確認
+                        sym = reel[i].reelsymbol[reel[i].posculc(reel[i].reelpos - 1 + line.List[i])];
+                        //メタシンボルは判定をスキップ
+                        if (symlist.List[i] == metaSymbol)
+                        {
+                            continue;
+                        }
+                        //図柄が判定している図柄組み合わせと違えば次の図柄組み合わせへ
+                        if (sym != symlist.List[i])
+                        {
+                            iscacth = false;
+                            break;
+                        }
+                    }
+
+                    if (iscacth)
+                    {
+                        //図柄がそろっていればループ脱出
+                        winCondApp = condapp;
+                        break;
+                    }
+                }
+
+                if (winCondApp is not null)
+                {
+                    //ボーナステンパイ
+                    return 1;
+                }
+            }
+        }
+        return 0;
+    }
+
     //ボーナステキストの有効化及び無効化
     public void SetBonusText(bool isdisp)
     {
@@ -198,7 +269,7 @@ public class MachineControl : MonoBehaviour
     }
 
     //抽せんデータの変更
-    void ChangeLottery(GameMode gameMode, CondApp FlagBonus, CondApp ActiveCAD, CondApp ActiveBonus)
+    void ChangeLottery(GameMode gameMode, CondApp FlagBonus, CondApp ActiveCAD, CondApp ActiveBonus, RTinfo rt = null)
     {
         foreach (LotteryData lotdata in lotteryDataList)
         {
@@ -206,6 +277,8 @@ public class MachineControl : MonoBehaviour
                 && ActiveCAD == lotdata.ActiveCAD 
                 && ActiveBonus == lotdata.ActiveBonus)
             {
+                //RT情報の判定
+                if (rt != null && lotdata.RTinfo != rt) continue;
                 lotteryCode.Data = lotdata;
                 return;
             }
@@ -230,6 +303,30 @@ public class MachineControl : MonoBehaviour
         }
     }
 
+    void LotForGame()
+    {
+        //抽せんオフセット決定
+        int index = 0;
+        if (activeCondAppGroup.isRAREtype())
+        {
+            index = 1;
+        }
+        //抽せん結果が1ならモンスター出現
+        if (lotteryCode.SubLottery_1B(index, subLotDataBase.GetSubLotList()[4]) == 1)
+        {
+            //モンスター数抽せん
+            int apparenum = lotteryCode.SubLottery_1B(index, subLotDataBase.GetSubLotList()[5]);
+            for (; apparenum > 0; apparenum--)
+            {
+                //出現モンスターを抽選
+                int result = lotteryCode.SubLottery_1B(index, subLotDataBase.GetSubLotList()[6]);
+                //出現テーブルから抽せん
+                Status hit = monsterTableDBs.GetMonsterTable()[0].hit_monster[result];
+                gameMaster.AddReserveMonster(hit);
+            }
+        }
+    }
+
     void Start()
     {
         //初期設定
@@ -239,13 +336,28 @@ public class MachineControl : MonoBehaviour
         spDecide.reels = reel;      //リール情報を横流し
         //抽選データ設定
         lotteryDataList = lotteryDataBase.GetLotteryLists();
-        lotteryCode.Data = lotteryDataList[(int)gameMode];
         lotteryCode.lose = lose;
         lotteryCode.sublotlist = subLotDataBase.GetSubLotList();
         //遊技状態設定
         ChangeMode(GameMode.NORMAL);
+        lotteryCode.Data = lotteryDataList[7];//RTDEBUG
         //テキストの更新
         TextUpdate();
+    }
+
+
+    public void FinishVideoGame(ATMODE ATstate)
+    {
+        //ゲーム部分終了
+        atstate = ATstate;
+        nextatstate = ATstate;
+        state = GameState.INSERT;
+    }
+
+    public void FinishVideoGame()
+    {
+        //ゲーム部分終了
+        state = GameState.INSERT;
     }
 
     // Update is called once per frame
@@ -265,7 +377,22 @@ public class MachineControl : MonoBehaviour
                         medal -= lotteryCode.Data.betlevel;
                         bet = lotteryCode.Data.betlevel;
                         state = GameState.READY;
-                        
+
+                    }
+                    else
+                    {
+                        //メダルが足りない場合、50枚追加
+                        Debug.Log("Insert 1,000 Yen.");
+                        Debug.Log("Medal +50");
+                        medal += 50;
+                        //規定数分のメダルを投入
+                        Debug.Log("Bet " + lotteryCode.Data.betlevel);
+                        medal -= lotteryCode.Data.betlevel;
+                        bet = lotteryCode.Data.betlevel;
+                        state = GameState.READY;
+
+                        //SE再生
+                        SEControll(5);
                     }
                     
                 }
@@ -294,6 +421,7 @@ public class MachineControl : MonoBehaviour
                 //内部抽選など
                 if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetButtonDown("Vertical"))
                 {
+                    stoporder = 0;                          //停止順リセット    
                     //内部抽選
                     activeCondAppGroup = lotteryCode.MainLottery(setting);
                     if(force_activeCondAppGroup != null)
@@ -303,25 +431,52 @@ public class MachineControl : MonoBehaviour
                     }
                     //ゲーム部分の抽選
                     //gameMaster.LotBFGame(activeCondAppGroup, lotteryCode);
-                    //ART抽せん
-                    int czhit = lotteryCode.CZlottery(activeCondAppGroup);
-                    if (nextatstate == ATMODE.NML)
+                    switch (atstate)
                     {
-                        if (czhit != 0 || (activeCondAppGroup.typeofCondApp & (int)(CondAppGroup.CondAppGroupTag.RARE | CondAppGroup.CondAppGroupTag.SR)) != 0)
-                        {
-                            //前兆設定
-                            (zen_game1, zen_game2) = lotteryCode.ZenChoulottery(czhit, activeCondAppGroup);
-                            if (czhit != 0)
+                        case ATMODE.NML:
+                            //ART抽せん
+                            int czhit = 0;
+                            if (!activeCondAppGroup.isBONUS()) czhit = lotteryCode.CZlottery(activeCondAppGroup);
+                            if (nextatstate == ATMODE.NML)
                             {
-                                //CZ前半へ
-                                Debug.Log("CZ当選:内容:" + czhit);
-                                nextatstate = ATMODE.CZ_PND;
+                                //前兆設定
+                                (zen_game1, zen_game2) = lotteryCode.ZenChoulottery(czhit, activeCondAppGroup);
+                                if (czhit != 0)
+                                {
+                                    //CZ前半へ
+                                    Debug.Log("CZ当選:内容:" + czhit);
+                                    nextatstate = ATMODE.CZ_PND;
+                                }
+                                else if(activeCondAppGroup.isBONUS())
+                                {
+                                    //ボナ当選
+                                    Debug.Log("BB当選!");
+                                    nextatstate = ATMODE.BNS_PND;
+                                }
+                                if (zen_game1 != 0) Debug.Log("前兆突入！：ゲーム数：" + zen_game1);
+
+                                //ゲーム抽せん
+                                LotForGame();
                             }
-                            if (zen_game1 != 0) Debug.Log("前兆突入！：ゲーム数：" + zen_game1);
-                        }
+
+                            //消灯抽せん
+                            lightoff = lotteryCode.Efflottery_Lightoff(activeCondAppGroup, zen_game1);
+                            break;
+                        case ATMODE.BNS_PND:
+                            movieController.MoviePlay(0);
+                            break;
+                        case ATMODE.BNS:
+                            //役物中
+                            break;
+                        case ATMODE.ART:
+                            //ナビ表示
+                            movieController.NabiSet(activeCondAppGroup);    //ナビのセット
+                            break;
+                        default:
+                            break;
                     }
-                    //消灯抽せん
-                    lightoff = lotteryCode.Efflottery_Lightoff(activeCondAppGroup, zen_game1);
+                    
+                    
                     //ゲーム数管理
                     switch (gameMode)
                     {
@@ -339,7 +494,7 @@ public class MachineControl : MonoBehaviour
                             break;
 
                     }
-                    stoporder = 0;
+                    
                     state = GameState.START;
                 }
                 break;
@@ -372,7 +527,7 @@ public class MachineControl : MonoBehaviour
                         
                         InputOrder(1);
                         reel[0].PrepareForStop();
-                        
+                        movieController.NabiUpdate(stoporder, activeCondAppGroup);        //ナビの更新
                     }
                 }
 
@@ -389,6 +544,7 @@ public class MachineControl : MonoBehaviour
                         }
                         InputOrder(2);
                         reel[1].PrepareForStop();
+                        movieController.NabiUpdate(stoporder, activeCondAppGroup);        //ナビの更新
                     }
                 }
 
@@ -405,6 +561,7 @@ public class MachineControl : MonoBehaviour
                         Debug.Log("3rd Stop");
                         InputOrder(3);
                         reel[2].PrepareForStop();
+                        movieController.NabiUpdate(stoporder, activeCondAppGroup);        //ナビの更新
                     }
                 }
 
@@ -506,6 +663,12 @@ public class MachineControl : MonoBehaviour
                                 jacGameCount = 12;
                                 jacWinCount = 8;
                             }
+
+                            if (FlagBonus == null && winCondApp.gotoRT != null)
+                            {
+                                //d契機図柄のRT遷移
+                                ChangeLottery(gameMode, FlagBonus, ActiveCAD, ActiveBonus, winCondApp.gotoRT);
+                            }
                         }
                     }
                 }
@@ -530,6 +693,11 @@ public class MachineControl : MonoBehaviour
                 }
 
                 //RT遷移チェック
+                if(activeCondAppGroup.isBELL() && payout == 0)
+                {
+                    //d契機図柄のRT遷移(押し順ベルこぼし)
+                    ChangeLottery(gameMode, FlagBonus, ActiveCAD, ActiveBonus, RT1);
+                }
 
                 //払い出し枚数の上限をチェック
                 if (payout > payoutmax)
@@ -583,30 +751,39 @@ public class MachineControl : MonoBehaviour
 
                 }
                 //前兆減算
-                zen_game1--;
-                if (zen_game1 < 0)
+                if (zen_game1 > 0)
                 {
-                    //ゲーム側に通達
-                    atstate = nextatstate;
-                    //次状態設定
-                    if (nextatstate == ATMODE.CZ_PND)
+                    zen_game1--;
+                    if (zen_game1 == 0)
                     {
-                        nextatstate = ATMODE.CZ;
-                        zen_game1 = zen_game2;
+                        //状態更新
+                        atstate = nextatstate;
+                        //次状態設定
+                        switch (nextatstate)
+                        {
+                            case ATMODE.CZ_PND:
+                                nextatstate = ATMODE.CZ;
+                                zen_game1 = zen_game2;
+                                break;
+                            case ATMODE.BNS_PND:
+                                nextatstate = ATMODE.BNS;
+                                zen_game1 = 0;
+                                break;
+                            default:
+                                nextatstate = ATMODE.NML;
+                                zen_game1 = 0;
+                                break;
+                        }
+                        //ゲーム側に通達
+                        gameMaster.SetATState(atstate);
                     }
-                    else
-                    {
-                        //前兆を初期化
-                        zen_game1 = 0;
-                    }
-                    //前兆更新
-                    gameMaster.SetATState(atstate);
                 }
+                
                 //ゲーム更新
                 gameMaster.UpdateGame(activeCondAppGroup);
                 
                 //メダル投入待機へ
-                state = GameState.INSERT;
+                state = GameState.SETUP;
                 break;
             default:
                 //まだ処理を作っていない

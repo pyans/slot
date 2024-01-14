@@ -8,4 +8,6 @@ public class SpecialStatus
     public int fast_2 = 0x2000;
     public int fast_3 = 0x3000;
     public int fast_4 = 0x4000;
+    //‚È‚ñ‚©—‚½‚æ‚¤‚È•Ï”‚ª•Ê‚Ì‚Æ‚±‚ë‚É‚àcc
+    //Á‚µ‚½‚Ù‚¤‚ª‚¢‚¢‚©‚à
 }

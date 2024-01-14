@@ -6,9 +6,45 @@ public class GameMaster : MonoBehaviour
 {
     //キャラクターのリスト
     List<Character> CharacterList = new List<Character>();
+
+    public List<Character> GetCharacterList()
+    {
+        return CharacterList;
+    }
+
     //敵及び味方のリスト
     List<Character> TeamList = new List<Character>();
     List<Character> EnemyList = new List<Character>();
+
+    List<Status> PrepareMonsters = new List<Status>();
+
+    public List<Character> GetEnemyList()
+    {
+        return EnemyList;
+    }
+
+    public List<Character> GetTeamList()
+    {
+        return TeamList;
+    }
+
+    public void AddReserveMonster(Status addmonster)
+    {
+        //出現モンスターの予約
+        PrepareMonsters.Add(addmonster);
+    }
+
+    public void RemoveReserveMonster()
+    {
+        //出現モンスターの出現とデータクリア
+        foreach (Status item in PrepareMonsters){
+            //一体ずつ前から配置【配置できない分は消滅】
+            AddCharacter(item, 0);
+        }
+
+        PrepareMonsters.Clear();
+    }
+
     //行動のリスト
     List<Character> ActorList = new List<Character>();
 
@@ -18,11 +54,16 @@ public class GameMaster : MonoBehaviour
     //キャラクターのステータスリスト
     public CharacterDataBase characterDataBase;
     List<Status> statusList;
+
     //行動リスト
     public SpecialActions spact;
+    public ActionList actionList;
 
     //当選条件装置
-    CondAppGroup condappGroup;
+    public CondAppGroup condappGroup;
+
+    //マシン本体
+    public MachineControl context;
 
     //AT状態
     ATMODE atstate = ATMODE.NML;     //AT状態
@@ -88,7 +129,7 @@ public class GameMaster : MonoBehaviour
 
     bool isATmodeChange()
     {
-        return (atstate != newatstate);
+        return atstate != newatstate;
     }
 
     int ApperePosDecide(int posindx, List<Character> clist)
@@ -149,6 +190,7 @@ public class GameMaster : MonoBehaviour
         //キャラオブジェクト作成
         GameObject prefab = Resources.Load<GameObject>("GAME/newChara");
         GameObject newChara = Instantiate(prefab, this.gameObject.transform);
+        newChara.transform.Translate(new Vector3(0, 0, 9.0f));
         Character newchara = newChara.GetComponent<Character>();
         //ステータス初期化
         newchara.SetStatus(status);
@@ -181,7 +223,8 @@ public class GameMaster : MonoBehaviour
     {
         //主人公オブジェクト作成
         GameObject prefab = Resources.Load<GameObject>("GAME/newPlayer");
-        GameObject newChara = Instantiate(prefab, this.gameObject.transform);
+        GameObject newChara = Instantiate(prefab, this.transform);
+        newChara.transform.Translate(new Vector3(0, 0, 10.0f));
         Player newchara = newChara.GetComponent<Player>();
         //ステータス初期化
         newchara.SetStatus(statusList[0]);
@@ -212,7 +255,7 @@ public class GameMaster : MonoBehaviour
         AddCharacter(statusList[1], 7);
 
         //特殊行動データベースを作成
-        spact = new SpecialActions(CharacterList, TeamList, EnemyList);
+        spact = new SpecialActions(this);
         //初期状態設定
         videoGameState = VideoGameState.STANDBY;
 
@@ -296,6 +339,8 @@ public class GameMaster : MonoBehaviour
         }
     }
 
+
+
     // Update is called once per frame
     void Update()
     {
@@ -305,16 +350,7 @@ public class GameMaster : MonoBehaviour
                 if (renewactor)
                 {
                     // 行動
-                    if (ActorList[0].Action())
-                    {
-                        //特技使用
-                        spact.SPActSelect(ActorList[0], condappGroup, ActorList[0].GetStatus().skill.id);
-                    }
-                    else
-                    {
-                        //通常攻撃
-                        spact.SPAct_0(ActorList[0], condappGroup);
-                    }
+                    ActorList[0].Action(this);
                     // 行動したものは削除
                     ActorList.RemoveAt(0);
                     //死亡者を削除
@@ -345,6 +381,16 @@ public class GameMaster : MonoBehaviour
                                     //背景を変化
                                     bg.BGChange(1);
                                     break;
+                                case ATMODE.BNS_PND:
+                                    //敵を全滅
+                                    spact.SPActSelect(player, null, actionList.GetActionLists()[3]);
+                                    //死亡者を削除
+                                    DeathCheck();
+                                    break;
+                                case ATMODE.END:
+                                    //AT終了
+                                    newatstate = ATMODE.NML;
+                                    break;
                                 default:
                                     //背景を変化
                                     bg.BGChange(0);
@@ -359,8 +405,31 @@ public class GameMaster : MonoBehaviour
                 }
                 break;
             case VideoGameState.CLEANUP:
+                //モンスター出現
+                RemoveReserveMonster();
                 //ステータス情報の更新
-                stdisp.RenewST(player.GetLevel(), player.hp, player.GetStatus().hp);      
+                stdisp.RenewST(player.GetLevel(), player.hp, player.GetStatus().hp);
+                videoGameState = VideoGameState.STANDBY;
+                //パチスロ側の投入可能
+                if (player.isdeath())
+                {
+                    //ゲームオーバー判定
+                    atstate = ATMODE.END;
+                    newatstate = ATMODE.END;
+                    context.FinishVideoGame(ATMODE.END);
+                }
+                else if (atstate == ATMODE.CZ && EnemyList.Count == 0)
+                {
+                    //ART突入
+                    atstate = ATMODE.ART;
+                    newatstate = ATMODE.ART;
+                    context.FinishVideoGame(ATMODE.ART);
+                }
+                else
+                {
+                    context.FinishVideoGame();
+                }
+                
                 break;
             default:
                 break;
