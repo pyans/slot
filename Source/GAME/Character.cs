@@ -87,15 +87,14 @@ public class Character : MonoBehaviour
 
     public void Damage(int damage)
     {
-        //守備力による減算
-        int lastdamage = Mathf.Max(0, damage - defence);
+        
         //ダメージを受ける
-        hp = Mathf.Max(0, hp - lastdamage);
+        hp = Mathf.Max(0, hp - damage);
 
         //ダメージ表示
         GameObject obj = Resources.Load<GameObject>("GAME/UI_GPX/DamageEff");
         GameObject newobj = Instantiate(obj, this.transform);
-        newobj.GetComponent<DamageEff>().MyStart(lastdamage);
+        newobj.GetComponent<DamageEff>().MyStart(damage);
 
         //HP0なら死亡
         if(hp <= 0)

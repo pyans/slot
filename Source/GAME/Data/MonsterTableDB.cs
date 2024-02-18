@@ -7,9 +7,15 @@ public class MonsterTableDB : ScriptableObject
 {
     //Œ³ƒf[ƒ^
     public List<MonsterTable> monsterTables_master = new List<MonsterTable>();
+    public List<FOETable> FOETables_master = new List<FOETable>();
 
     public List<MonsterTable> GetMonsterTable()
     {
         return monsterTables_master;
+    }
+
+    public List<FOETable> GetFOETable()
+    {
+        return FOETables_master;
     }
 }

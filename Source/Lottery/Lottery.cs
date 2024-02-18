@@ -57,7 +57,7 @@ public class Lottery
                 return result;
             }
 
-            //結果をセット(最低値は1)
+            //次の抽選へ
             result++;
         }
 
@@ -164,12 +164,12 @@ public class Lottery
                     if((hit.typeofCondApp & (int)(CondAppGroup.CondAppGroupTag.RARE| CondAppGroup.CondAppGroupTag.SR)) != 0)
                     {
                         //レア役のガセ前兆
-                        return (SubLottery_1B(1, sublotlist[3])-1, 0);
+                        return (SubLottery_1B(1, sublotlist[3]), 0);
                     }
                     break;
             }
         }
-        //CZの前兆ゲーム数を返す
-        return (SubLottery_1B(index, sublotlist[3])-1, SubLottery_1B(index + 2, sublotlist[3]));
+        //CZの前兆ゲーム数を返す(当該ゲームを含めるため前兆1には1を足す)
+        return (SubLottery_1B(index, sublotlist[3]) + 1, SubLottery_1B(index + 2, sublotlist[3]));
     }
 }

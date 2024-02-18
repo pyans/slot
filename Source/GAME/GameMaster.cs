@@ -65,10 +65,6 @@ public class GameMaster : MonoBehaviour
     //マシン本体
     public MachineControl context;
 
-    //AT状態
-    ATMODE atstate = ATMODE.NML;     //AT状態
-    ATMODE newatstate = ATMODE.NML;     //次AT状態
-    //int zen_game = 0;       //前兆ゲーム数
 
     //背景スクリプト
     public BGControll bg;
@@ -119,18 +115,13 @@ public class GameMaster : MonoBehaviour
     //AT状態関連
     public void SetATState(ATMODE newatmode)
     {
-        newatstate = newatmode;
+        //newatstate = newatmode;
     }
 
 /*    public void SetZenGame(int set_zen_game)
     {
         zen_game = set_zen_game;        //前兆ゲーム数設定
     }*/
-
-    bool isATmodeChange()
-    {
-        return atstate != newatstate;
-    }
 
     int ApperePosDecide(int posindx, List<Character> clist)
     {
@@ -180,7 +171,7 @@ public class GameMaster : MonoBehaviour
         else
         {
             //味方の場合
-            if ((pos_plan = ApperePosDecide(posindx - 9, EnemyList) + 9) == -1)
+            if ((pos_plan = ApperePosDecide(posindx - 9, TeamList) + 9) == -1)
             {
                 //出現数限界
                 Debug.Log("Can't spone friend.");
@@ -219,6 +210,23 @@ public class GameMaster : MonoBehaviour
         newChara.transform.Translate(posdata[pos_plan]);
     }
 
+    public void RemoveCharacter(Character chara)
+    {
+        //キャラ削除
+        if (chara.isenemy)
+        {
+            EnemyList.Remove(chara);
+        }
+        else
+        {
+            TeamList.Remove(chara);
+        }
+        CharacterList.Remove(chara);
+        ActorList.Remove(chara);
+        //オブジェクト削除
+        Destroy(chara, 0.5f);
+    }
+
     void AddPlayer()
     {
         //主人公オブジェクト作成
@@ -241,6 +249,16 @@ public class GameMaster : MonoBehaviour
         player = newchara;
     }
 
+    void AddFOE(FOETable table)
+    {
+        int len = table.hit_monster.Count;
+        for (int i = 0; i <len; i++ )
+        {
+            //固定敵の配置
+            AddCharacter(table.hit_monster[i], table.posindx_list[i]);
+        }
+    }
+
     // Start is called before the first frame update
     void Start()
     {
@@ -250,9 +268,9 @@ public class GameMaster : MonoBehaviour
         AddPlayer();
         AddCharacter(statusList[1], 1);
         AddCharacter(statusList[2], 2);
-        AddCharacter(statusList[3], 0);
-        AddCharacter(statusList[4], 4);
-        AddCharacter(statusList[1], 7);
+        AddCharacter(statusList[1], 0);
+        AddCharacter(statusList[2], 4);
+        AddCharacter(statusList[2], 7);
 
         //特殊行動データベースを作成
         spact = new SpecialActions(this);
@@ -260,6 +278,24 @@ public class GameMaster : MonoBehaviour
         videoGameState = VideoGameState.STANDBY;
 
         stdisp.RenewST(player.GetLevel(), player.hp, player.GetStatus().hp);
+    }
+
+    public void InitGame()
+    {
+        //各リストから削除
+        TeamList.Clear();
+        EnemyList.Clear();
+        //Characterlistからキャラを削除
+        foreach (Character temp in CharacterList)
+        {
+            //ゲームオブジェクトをディレイして削除
+            Destroy(temp.gameObject);
+        }
+        //ディレイ中にキャラリストから削除
+        CharacterList.Clear();
+
+        //プレイヤー蘇生
+        AddPlayer();
     }
 
     public void LotBFGame(CondAppGroup hitminor, Lottery lottery)
@@ -340,10 +376,13 @@ public class GameMaster : MonoBehaviour
     }
 
 
+    //更新用タイマ
+    private float timer = 0.1f;
 
     // Update is called once per frame
     void Update()
     {
+         
         switch (videoGameState)
         {
             case VideoGameState.ACTION: 
@@ -367,13 +406,13 @@ public class GameMaster : MonoBehaviour
                         //次のターンへ
                         ActorList.Clear();
                         
-                        if (isATmodeChange())
+                        if (context.isATmodeChange())
                         {
-                            switch (newatstate)
+                            switch (context.GetATMODE())
                             {
                                 case ATMODE.CZ:
                                     //ボス出現
-                                    AddCharacter(statusList[5], 4);
+                                    AddFOE(context.monsterTableDBs.GetFOETable()[1]);
                                     //背景を変化
                                     bg.BGChange(2);
                                     break;
@@ -387,21 +426,32 @@ public class GameMaster : MonoBehaviour
                                     //死亡者を削除
                                     DeathCheck();
                                     break;
+                                case ATMODE.ART:
+                                    bg.BGChange(3);
+                                    break;
                                 case ATMODE.END:
                                     //AT終了
-                                    newatstate = ATMODE.NML;
+                                    InitGame();
                                     break;
                                 default:
                                     //背景を変化
                                     bg.BGChange(0);
                                     break;
                             }
-                            atstate = newatstate;
                         }
                         videoGameState = VideoGameState.CLEANUP;
                         return;
                     }
-                    renewactor = true;
+                    else
+                    {
+                        timer -= Time.deltaTime;
+                        if (timer < 0)
+                        {
+                            timer = 0.1f;
+                            renewactor = true;
+                        }
+                    }
+                    
                 }
                 break;
             case VideoGameState.CLEANUP:
@@ -414,16 +464,13 @@ public class GameMaster : MonoBehaviour
                 if (player.isdeath())
                 {
                     //ゲームオーバー判定
-                    atstate = ATMODE.END;
-                    newatstate = ATMODE.END;
                     context.FinishVideoGame(ATMODE.END);
                 }
-                else if (atstate == ATMODE.CZ && EnemyList.Count == 0)
+                else if (context.GetATMODE() == ATMODE.CZ && EnemyList.Count == 0)
                 {
                     //ART突入
-                    atstate = ATMODE.ART;
-                    newatstate = ATMODE.ART;
                     context.FinishVideoGame(ATMODE.ART);
+                    context.InitART();
                 }
                 else
                 {

@@ -31,10 +31,16 @@ public class SpecialActions
     }
 
     //UŒ‚—ÍZo
-    int CulcDamage(int atk)
+    int CulcDamage(int atk, int def)
     {
         float rate = Random.Range(-0.25f, 0.25f);
-        return (int)(atk * (1.0f + rate));
+        int tempdamage = Mathf.Max((int)(atk * (1.0f + rate) - (def / 2)), 0);
+        if (tempdamage == 0)
+        {
+            //0ƒ_ƒ‚Íƒ_ƒ•ÏŠ·
+            tempdamage = Random.Range(0, 100) % 2 == 0 ? 1 : 0;
+        }
+        return tempdamage;
     }
 
     Character AutoTarget(Character chr, Character pretarget)
@@ -83,29 +89,27 @@ public class SpecialActions
         //’ÊíUŒ‚
         Character tgt = AutoTarget(chr, target);
         if (tgt == null) return;
-        tgt.Damage(CulcDamage(chr.attack*2));
+        tgt.Damage(CulcDamage(chr.attack, tgt.defence));
         
     }
 
     public void SPAct_1(Character chr, Character target)
     {
-        //‹­‰»UŒ‚(ålŒö—p)
-        //’ÊíUŒ‚
+        //‹­‰»UŒ‚(ålŒöãƒ`ƒF—p)
         Character tgt = AutoTarget(chr, target);
         if (tgt == null) return;
-        tgt.Damage(CulcDamage(chr.attack*8));
+        tgt.Damage(CulcDamage(chr.attack * 4, 0));
     }
 
     public void SPAct_2(Character chr, Character target)
     {
-        //‹­‰»UŒ‚(ålŒö—p)
-
-        //’ÊíUŒ‚
+        //‹­‰»UŒ‚(ålŒöƒXƒCƒJ—p)
+        //‘S‘ÌUŒ‚
         foreach (Character tmp in EnemyList)
         {
             if (tmp != null && !tmp.isdeath())
             {
-                tmp.Damage(CulcDamage(chr.attack * 4));
+                tmp.Damage(CulcDamage(chr.attack * 2, tmp.defence));
             }
         }
     }
@@ -113,9 +117,13 @@ public class SpecialActions
     public void SPAct_3(Character chr, Character target)
     {
         //‹­‰»UŒ‚(ålŒö‹­ƒŒƒA—p)
-        Character tgt = AutoTarget(chr, target);
-        if (tgt == null) return;
-        tgt.Damage(CulcDamage(chr.attack * 16));
+        foreach (Character tmp in EnemyList)
+        {
+            if (tmp != null && !tmp.isdeath())
+            {
+                tmp.Damage(CulcDamage(chr.attack * 4, 0));
+            }
+        }
     }
 
     public void SPAct_4(Character chr, Character target)
@@ -126,7 +134,13 @@ public class SpecialActions
         //’ÊíUŒ‚
         Character tgt = AutoTarget(chr, target);
         if (tgt == null) return;
-        tgt.Damage(CulcDamage(chr.attack));
+        tgt.Damage(CulcDamage(chr.attack, 0));
+    }
+
+    public void SPAct_5(Character chr, Character target)
+    {
+        //“¦‘–
+        context.RemoveCharacter(chr);
     }
 
     public void SPAct_16(Character chr, Character target)

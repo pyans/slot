@@ -23,6 +23,7 @@ public class ReelScript : MonoBehaviour
     private bool rollstate = false;     //物理的に回転しているかのフラグ
     private bool stopmode = false;      //停止モード中(停止ボタンが押されてから回胴が止まるまで)かどうかのフラグ
     private bool standbystop = false;   //停止ボタンが有効かどうかのフラグ
+    private bool pussingstop = false;   //停止ボタンが押されているかどうかのフラグ
 
     //消灯テスト
     public bool isturnoff = false;
@@ -66,6 +67,17 @@ public class ReelScript : MonoBehaviour
     public void SetRollState(bool newstate)
     {
         rollstate = newstate;
+    }
+
+    //回胴停止ボタン押下中かどうか
+    public void SetPushbutton(bool newstate)
+    {
+        pussingstop = newstate;
+    }
+
+    public bool GetPushbutton()
+    {
+        return pussingstop;
     }
 
     //回胴回転中状態の取得

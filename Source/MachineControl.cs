@@ -59,11 +59,7 @@ public class MachineControl : MonoBehaviour
     public CondAppDataBase condAppDataBase;
     public List<CondApp> condApps;      //作動可能性のある条件装置(デバッグのために残してあるが最終的に消す)
 
-    //演出スクリプト
-    public MovieController movieController;
-
-    //リール消灯情報
-    public int lightoff = 0;
+    
 
     //GOGOランプ
     public Lamp lamp;
@@ -80,6 +76,7 @@ public class MachineControl : MonoBehaviour
     public int medal;
     public int bet;
     public int payout;
+    int lastpayout;
     public int payoutmax = 15;
     //JAC中ゲーム数管理
     int jacRest = 0;
@@ -89,10 +86,27 @@ public class MachineControl : MonoBehaviour
     public RTinfo RT1;
     //リール情報
     public List<ReelScript> reel = new List<ReelScript>();
+
+
+    /*** 
+     * 
+     * 演出用スクリプト 
+     * 
+     * ***/
     //SEリスト
     public Sounds Sounds;
     //簡単な音楽再生
     public AudioSource audioSource;
+    //汎用タイマ
+    const float GameWait = 4.1f;
+    const float PayWait = 1.0f / 30.0f;
+    float generic_timer = PayWait;
+    float gamewait_timer = 0.0f;
+    //演出スクリプト
+    public MovieController movieController;
+    //リール消灯情報
+    public int lightoff = 0;
+    public LightManager lightManager;
 
     //押し順バッファ
     public int stoporder = 0;
@@ -123,10 +137,13 @@ public class MachineControl : MonoBehaviour
     GameState state;    //遊技機の状態
 
     //AT状態
-    ATMODE atstate;     //AT状態
-    ATMODE nextatstate;     //次AT状態
+    public ATMODE atstate;     //AT状態
+    public ATMODE nextatstate;     //次AT状態
+    bool isATchange = false;    //AT状態変更したか？
+    bool isinstruction = false;
     int zen_game1;       //前兆ゲーム数1
     int zen_game2;       //前兆ゲーム数2
+    int czhitbuff = 0;  //CZ当選フラグ
 
     //遊技状態
     enum GameMode
@@ -152,6 +169,12 @@ public class MachineControl : MonoBehaviour
     public void SetATMODE(ATMODE newstate)
     {
         atstate = newstate;
+        isATchange = true;
+    }
+
+    public bool isATmodeChange()
+    {
+        return isATchange;
     }
 
     public void InputOrder(int reelnum)
@@ -199,11 +222,23 @@ public class MachineControl : MonoBehaviour
         if (isstart) audioSource.Play();
         else audioSource.Stop();
     }
+    void musicControll(int bgmid, bool isstart)
+    {
+        audioSource.clip = Sounds.GetBGMs()[bgmid];
+        if (isstart) audioSource.Play();
+        else audioSource.Stop();
+    }
 
     //効果音再生
     public void SEControll(int seid)
     {
-        audioSource.PlayOneShot((Sounds.GetSEs())[seid]);
+        audioSource.PlayOneShot(Sounds.GetSEs()[seid]);
+    }
+
+    public void SEControll(int seid, bool isstart)
+    {
+        if (isstart) audioSource.Play();
+        else audioSource.Stop();
     }
 
     //テンパイチェック
@@ -303,14 +338,33 @@ public class MachineControl : MonoBehaviour
         }
     }
 
-    void LotForGame()
+    void LotMonsterAppere()
     {
         //抽せんオフセット決定
         int index = 0;
         if (activeCondAppGroup.isRAREtype())
         {
             index = 1;
+            if (activeCondAppGroup.isRAREtype() && !activeCondAppGroup.isRARE())
+            {
+                //強レア
+                index = 2;
+            }
         }
+
+        //テーブル決定
+        int tableid = 0;
+        switch (atstate)
+        {
+            case ATMODE.NML:
+                break;
+            case ATMODE.CZ_PND:
+                tableid = 1;
+                break;
+            default:
+                break;
+        }
+
         //抽せん結果が1ならモンスター出現
         if (lotteryCode.SubLottery_1B(index, subLotDataBase.GetSubLotList()[4]) == 1)
         {
@@ -321,10 +375,52 @@ public class MachineControl : MonoBehaviour
                 //出現モンスターを抽選
                 int result = lotteryCode.SubLottery_1B(index, subLotDataBase.GetSubLotList()[6]);
                 //出現テーブルから抽せん
-                Status hit = monsterTableDBs.GetMonsterTable()[0].hit_monster[result];
+                Status hit = monsterTableDBs.GetMonsterTable()[tableid].hit_monster[result];
                 gameMaster.AddReserveMonster(hit);
             }
         }
+    }
+
+    void LotForGame()
+    {
+        //ゲームにかかわる抽せん処理
+        
+        switch (atstate)
+        {
+            case ATMODE.NML:
+            case ATMODE.ART:
+                LotMonsterAppere();
+                break;
+            case ATMODE.CZ_PND:
+                if (zen_game1 > 3)
+                {
+                    LotMonsterAppere();
+                }
+                break;
+            default:
+                break;
+        }
+
+        return;
+    }
+
+    void LotZenChou(int czhit)
+    {
+        //前兆設定
+        (zen_game1, zen_game2) = lotteryCode.ZenChoulottery(czhit, activeCondAppGroup);
+        if (czhit != 0)
+        {
+            //CZ前半へ
+            Debug.Log("CZ当選:内容:" + czhit);
+            nextatstate = ATMODE.CZ_PND;
+        }
+        else if (activeCondAppGroup.isBONUS())
+        {
+            //ボナ当選
+            Debug.Log("BB当選!");
+            nextatstate = ATMODE.BNS_PND;
+        }
+        if (zen_game1 != 0) Debug.Log("前兆突入！：ゲーム数：" + zen_game1);
     }
 
     void Start()
@@ -340,7 +436,7 @@ public class MachineControl : MonoBehaviour
         lotteryCode.sublotlist = subLotDataBase.GetSubLotList();
         //遊技状態設定
         ChangeMode(GameMode.NORMAL);
-        lotteryCode.Data = lotteryDataList[7];//RTDEBUG
+        lotteryCode.Data = lotteryDataList[7];//通常時
         //テキストの更新
         TextUpdate();
     }
@@ -351,13 +447,23 @@ public class MachineControl : MonoBehaviour
         //ゲーム部分終了
         atstate = ATstate;
         nextatstate = ATstate;
+        //AT更新を終了
+        isATchange = false;
         state = GameState.INSERT;
     }
 
     public void FinishVideoGame()
     {
         //ゲーム部分終了
+        //AT更新を終了
+        isATchange = false;
         state = GameState.INSERT;
+    }
+
+    public void InitART()
+    {
+        //ART用の初期化
+        isinstruction = true;
     }
 
     // Update is called once per frame
@@ -404,13 +510,8 @@ public class MachineControl : MonoBehaviour
                 if (state == GameState.READY)
                 {
                     payout = 0;
-
-                    //リール点灯
-                    foreach (ReelScript tmp in reel)
-                    {
-                        tmp.ReelLight.turnON();
-                        lightoff = 0;
-                    }
+                    lightoff = 0;
+                    lightManager.EffReset();
 
                     //SE再生
                     SEControll(0);
@@ -436,36 +537,45 @@ public class MachineControl : MonoBehaviour
                         case ATMODE.NML:
                             //ART抽せん
                             int czhit = 0;
-                            if (!activeCondAppGroup.isBONUS()) czhit = lotteryCode.CZlottery(activeCondAppGroup);
-                            if (nextatstate == ATMODE.NML)
+                            if (!activeCondAppGroup.isBONUS() && !FlagBonus) czhit = lotteryCode.CZlottery(activeCondAppGroup);
+                            switch (czhitbuff)
                             {
-                                //前兆設定
-                                (zen_game1, zen_game2) = lotteryCode.ZenChoulottery(czhit, activeCondAppGroup);
-                                if (czhit != 0)
-                                {
-                                    //CZ前半へ
-                                    Debug.Log("CZ当選:内容:" + czhit);
-                                    nextatstate = ATMODE.CZ_PND;
-                                }
-                                else if(activeCondAppGroup.isBONUS())
-                                {
-                                    //ボナ当選
-                                    Debug.Log("BB当選!");
-                                    nextatstate = ATMODE.BNS_PND;
-                                }
-                                if (zen_game1 != 0) Debug.Log("前兆突入！：ゲーム数：" + zen_game1);
+                                case 0:
+                                    //CZ当選、ないしレア役の場合前兆を抽選(すでにCZ当選の場合はスキップ)
+                                    if (activeCondAppGroup.isRAREtype() || czhit != 0)
+                                    {
+                                        //前兆を抽せん(CZorボナorガセ)
+                                        LotZenChou(czhit);
+                                    }
+                                    //当選情報を保存
+                                    czhitbuff = czhit;
+                                    break;
+                                case 1:
+                                case 2:
+                                case 3:
+                                    //上位のCZに当選した場合上書き、CZ再当選でレベルアップ
+                                    //if (czhit > czhitbuff) czhitbuff = czhit;
+                                    //else if (czhit != 0) czhitbuff++;
+                                    break;
+                                case 4:
+                                    //当確
+                                    break;
 
-                                //ゲーム抽せん
-                                LotForGame();
                             }
 
                             //消灯抽せん
                             lightoff = lotteryCode.Efflottery_Lightoff(activeCondAppGroup, zen_game1);
                             break;
                         case ATMODE.BNS_PND:
-                            movieController.MoviePlay(0);
+                            movieController.MoviePlay(0, MovieController.MOVIELAYER.BACK);
+                            if (activeCondAppGroup.isBONUS())
+                            {
+                                movieController.MoviePlay(1, MovieController.MOVIELAYER.BB_BACK);
+                            }
                             break;
                         case ATMODE.BNS:
+
+                            movieController.MovieStop();
                             //役物中
                             break;
                         case ATMODE.ART:
@@ -475,8 +585,11 @@ public class MachineControl : MonoBehaviour
                         default:
                             break;
                     }
-                    
-                    
+
+                    //ゲーム抽せん
+                    LotForGame();
+
+
                     //ゲーム数管理
                     switch (gameMode)
                     {
@@ -496,17 +609,21 @@ public class MachineControl : MonoBehaviour
                     }
                     
                     state = GameState.START;
+                    musicControll(0, true);
                 }
                 break;
             case GameState.START:
+                //4.1秒タイマ
+                if (gamewait_timer != 0) break;
+                gamewait_timer = GameWait;
                 //リール回転及び停止許可
                 foreach (ReelScript a_reel in reel)
                 {
                     a_reel.SetRollState(true);
                     a_reel.PermitStop();
                 }
-                //SE再生
-                SEControll(1);
+                //回転開始音再生
+                musicControll(1, true);
                 //遊技中状態へ
                 state = GameState.GAME;
                 break;
@@ -522,16 +639,22 @@ public class MachineControl : MonoBehaviour
                         if (lightoff > 0)
                         {
                             lightoff--;
-                            reel[0].isturnoff = true;
+                            lightManager.EffSet(1);
                         }
                         
                         InputOrder(1);
                         reel[0].PrepareForStop();
+                        reel[0].SetPushbutton(true);
                         movieController.NabiUpdate(stoporder, activeCondAppGroup);        //ナビの更新
                     }
                 }
+                else if (Input.GetKeyUp("z") || Input.GetButtonUp("Fire3"))
+                {
+                    //停止ボタンを離したら
+                    reel[0].SetPushbutton(false);
+                }
 
-                if (Input.GetKeyDown("x") || Input.GetButtonDown("Fire2"))
+                    if (Input.GetKeyDown("x") || Input.GetButtonDown("Fire2"))
                 {
                     if (reel[1].IsStopOK())
                     {
@@ -540,12 +663,18 @@ public class MachineControl : MonoBehaviour
                         if (lightoff > 0)
                         {
                             lightoff--;
-                            reel[1].isturnoff = true;
+                            lightManager.EffSet(2);
                         }
                         InputOrder(2);
                         reel[1].PrepareForStop();
+                        reel[1].SetPushbutton(true);
                         movieController.NabiUpdate(stoporder, activeCondAppGroup);        //ナビの更新
                     }
+                }
+                else if (Input.GetKeyUp("x") || Input.GetButtonUp("Fire2"))
+                {
+                    //停止ボタンを離したら
+                    reel[1].SetPushbutton(false);
                 }
 
                 if (Input.GetKeyDown("c") || Input.GetButtonDown("Fire1"))
@@ -556,13 +685,19 @@ public class MachineControl : MonoBehaviour
                         if (lightoff > 0)
                         {
                             lightoff--;
-                            reel[2].isturnoff = true;
+                            lightManager.EffSet(3);
                         }
                         Debug.Log("3rd Stop");
                         InputOrder(3);
                         reel[2].PrepareForStop();
+                        reel[2].SetPushbutton(true);
                         movieController.NabiUpdate(stoporder, activeCondAppGroup);        //ナビの更新
                     }
+                }
+                else if (Input.GetKeyUp("c") || Input.GetButtonUp("Fire1"))
+                {
+                    //停止ボタンを離したら
+                    reel[2].SetPushbutton(false);
                 }
 
                 //遊技終了判定
@@ -571,7 +706,9 @@ public class MachineControl : MonoBehaviour
                 {
                     //回転中の回胴がなければ
                     if (a_reel.GetRollState()) isgameend = false;
+                    if (a_reel.GetPushbutton()) isgameend = false;
                 }
+                
                 //遊技終了処理
                 if (isgameend)
                 {
@@ -586,6 +723,7 @@ public class MachineControl : MonoBehaviour
                 foreach (EffectiveLineList line in effectiveline)
                 {
                     //ハズレ条件装置の場合スキップ
+                    int lineid = -1;
                     if (activeCondAppGroup.CondApps.Count == 0) continue;
                     foreach(CondApp condapp in activeCondAppGroup.CondApps)
                     {
@@ -616,12 +754,15 @@ public class MachineControl : MonoBehaviour
                             {
                                 //図柄がそろっていればループ脱出
                                 winCondApp = condapp;
+                                //ライン消灯テスト
+                                lineid = effectiveline.IndexOf(line);
                                 break;
                             }
                         }
 
                         if(winCondApp is not null)
                         {
+                            lightManager.EffSet(lineid + 4);
                             //勝ち取り役が入賞の場合
                             if (winCondApp.condappType == CondApp.CondAppType.WIN)
                             {
@@ -648,6 +789,9 @@ public class MachineControl : MonoBehaviour
                                 gameNumber = winCondApp.maxMinorGame;
                                 //払い出しを加算(通常時しかないぞ)
                                 payout += winCondApp.payoutList[(int)GameMode.NORMAL];
+                                //AT遷移
+                                nextatstate = ATMODE.BNS;
+                                zen_game1 = 1;
                                 //BGM再生
                                 musicControll(true);
                             }
@@ -704,12 +848,30 @@ public class MachineControl : MonoBehaviour
                 {
                     payout = payoutmax;
                 }
+                //払い出し枚数バッファをチェック
+                lastpayout = payout;
+                //払い出しSE
+                if (payout > 0)
+                {
+                    if (activeCondAppGroup.isBELL())
+                    {
+                        SEControll(6);
+                    }
+                }
                 //払い出しへ
                 state = GameState.PAY;
                 break;
             case GameState.PAY:
                 //払い出し
-                medal += payout;
+                generic_timer -= Time.deltaTime;
+                if(generic_timer <= 0 && payout > 0)
+                {
+                    generic_timer = PayWait;
+                    medal += 1;
+                    lastpayout -= 1;
+                }
+                if (lastpayout > 0) break;
+                
                 //遊技終了時ゲーム数管理
                 switch (gameMode)
                 {
@@ -720,6 +882,7 @@ public class MachineControl : MonoBehaviour
                             gameNumber = 0;
                             ActiveCAD = null;
                             ChangeMode(GameMode.NORMAL);
+                            zen_game1 = 1;
                             //ペカを消す
                             lamp.DisPeka();
                         }
@@ -731,12 +894,13 @@ public class MachineControl : MonoBehaviour
                         if(jacGameCount <= 0 || jacWinCount <= 0)
                         {
                             //残りJAC回数0で通常時へ
-                            if(jacRest <= 0)
+                            if(jacRest <= 0 || gameNumber <= 0)
                             {
                                 gameNumber = 0;
                                 ActiveCAD = null;
                                 ActiveBonus = null;
                                 ChangeMode(GameMode.NORMAL);
+                                zen_game1 = 1;
                                 //ペカを消す
                                 lamp.DisPeka();
                             }
@@ -758,19 +922,34 @@ public class MachineControl : MonoBehaviour
                     {
                         //状態更新
                         atstate = nextatstate;
+                        isATchange = true;
                         //次状態設定
                         switch (nextatstate)
                         {
                             case ATMODE.CZ_PND:
                                 nextatstate = ATMODE.CZ;
+                                czhitbuff = 0;
                                 zen_game1 = zen_game2;
                                 break;
                             case ATMODE.BNS_PND:
                                 nextatstate = ATMODE.BNS;
                                 zen_game1 = 0;
                                 break;
+                            case ATMODE.BNS:
+                                if (isinstruction)
+                                {
+                                    nextatstate = ATMODE.ART;
+                                    zen_game1 = 0;
+                                    break;
+                                }
+                                if(czhitbuff == 0) nextatstate = ATMODE.NML;
+                                else nextatstate = ATMODE.CZ_PND;
+                                zen_game1 = 0;
+                                break;
                             default:
+                                //初期化
                                 nextatstate = ATMODE.NML;
+                                isinstruction = false;
                                 zen_game1 = 0;
                                 break;
                         }
@@ -778,7 +957,20 @@ public class MachineControl : MonoBehaviour
                         gameMaster.SetATState(atstate);
                     }
                 }
-                
+
+                //AT状態遷移
+                switch (atstate)
+                {
+                    case ATMODE.END:
+                        //状態更新
+                        atstate = nextatstate;
+                        isATchange = true;
+                        nextatstate = ATMODE.NML;
+                        break;
+                    default:
+                        break;
+                }
+
                 //ゲーム更新
                 gameMaster.UpdateGame(activeCondAppGroup);
                 
@@ -792,5 +984,7 @@ public class MachineControl : MonoBehaviour
 
         //情報更新
         TextUpdate();
+        //タイマ更新
+        gamewait_timer = Mathf.Max(0, gamewait_timer - Time.deltaTime);
     }
 }

@@ -37,7 +37,7 @@ public class DamageEff : MonoBehaviour
         //タイマー設定
         nowtimer = Timer;
         //数字オブジェクト製作
-        var numlist = new List<int>();
+        List<int> numlist = new List<int>();
         numlist = dispnum(damage);
         int i = 0;
 
