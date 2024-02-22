@@ -67,6 +67,7 @@ public class MachineControl : MonoBehaviour
     public UISettings uiSettings;
     //ゲーム数
     public int gameNumber = 0;
+    public int money = 10000;
 
     //Inspectorに表示される
     [SerializeField]
@@ -490,6 +491,7 @@ public class MachineControl : MonoBehaviour
                         //メダルが足りない場合、50枚追加
                         Debug.Log("Insert 1,000 Yen.");
                         Debug.Log("Medal +50");
+                        money -= 1000;
                         medal += 50;
                         //規定数分のメダルを投入
                         Debug.Log("Bet " + lotteryCode.Data.betlevel);

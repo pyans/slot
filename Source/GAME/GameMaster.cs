@@ -184,6 +184,7 @@ public class GameMaster : MonoBehaviour
         newChara.transform.Translate(new Vector3(0, 0, 9.0f));
         Character newchara = newChara.GetComponent<Character>();
         //ステータス初期化
+        newchara.MyInit();
         newchara.SetStatus(status);
         //初期待機時間設定
         newchara.SetCount(newchara.GetStatus().firstwait);
@@ -235,6 +236,7 @@ public class GameMaster : MonoBehaviour
         newChara.transform.Translate(new Vector3(0, 0, 10.0f));
         Player newchara = newChara.GetComponent<Player>();
         //ステータス初期化
+        newchara.MyInit();
         newchara.SetStatus(statusList[0]);
         //初期待機時間設定
         newchara.SetCount(newchara.GetStatus().firstwait);

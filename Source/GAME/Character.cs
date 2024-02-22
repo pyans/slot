@@ -2,7 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Character : MonoBehaviour
+public interface ICharacter
+{
+    void SetStatus(Status setstatus);
+    Status GetStatus();
+    void SetSprite();
+}
+
+public class Character : MonoBehaviour, ICharacter
 {
     [SerializeField]
     protected Status status;
@@ -18,6 +25,8 @@ public class Character : MonoBehaviour
     public bool isenemy;
     //特性、状態異常
     public int statusFlug;
+    GameObject CountDispObj;
+    GameObject STDispObj;
 
     public void SetStatus(Status setstatus)
     {
@@ -151,39 +160,61 @@ public class Character : MonoBehaviour
     {
         //カウント減算
         waitcount--;
+        UpdateCount();
     }
 
     public void ResetCount()
     {
         //カウントリセット
         waitcount = status.firstwait;
+        UpdateCount();
     }
 
     public void SetCount(int newcount)
     {
         //カウントを特定値に
         waitcount = newcount;
+        UpdateCount();
     }
 
     public void AddCount(int addcount)
     {
         //カウント増加
         waitcount += addcount;
+        UpdateCount();
+    }
+
+    void UpdateCount()
+    {
+        //waitcount表記更新
+        CountDispObj.GetComponent<CountDisp>().UpdateCount(waitcount);
+    }
+
+    void AddCountDisp()
+    {
+        //状態異常アイコン表示
+        GameObject obj = Resources.Load<GameObject>("GAME/UI_GPX/CountDisp");
+        CountDispObj = Instantiate(obj, this.transform);
     }
 
     void AddStDisp(int stid)
     {
         //状態異常アイコン表示
         GameObject obj = Resources.Load<GameObject>("GAME/UI_GPX/Icon/STDisp");
-        GameObject newobj = Instantiate(obj, this.transform);
+        STDispObj = Instantiate(obj, this.transform);
+    }
+
+    public void MyInit()
+    {
+        //待機時間を表示
+        AddCountDisp();
+        //未着手
     }
 
     // Start is called before the first frame update
     void Start()
     {
-        //待機時間を表示
-
-        //未着手
+        
     }
 
     // Update is called once per frame
