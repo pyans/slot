@@ -35,9 +35,14 @@ public class Status : ScriptableObject
     public int statusFlug;
     //グラ
     public Sprite sprite;
+    //経験値
+    public int exp;
 
     public Status StatusCopy()
     {
+        //WARNIG
+        //MemberWiseCloneはシャローコピーの模様
+        //このままだとリスト等の参照型は上書きする
         return (Status)MemberwiseClone();
     }
 }

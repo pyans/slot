@@ -5,9 +5,10 @@ using UnityEngine;
 public class Character : MonoBehaviour
 {
     [SerializeField]
-    private Status status;
+    protected Status status;
     public int waitcount;
     public int randmax = 256;
+    public int posindex;
 
     public void SetStatus(Status setstatus)
     {
@@ -28,8 +29,6 @@ public class Character : MonoBehaviour
     {
         this.GetComponent<SpriteRenderer>().sprite = status.sprite;
     }
-
-
 
     public bool Action()
     {
@@ -100,8 +99,6 @@ public class Character : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        //‰Šú‘Ò‹@ŠÔ‚ğİ’è
-        waitcount = status.firstwait;
         //‘Ò‹@ŠÔ‚ğ•\¦
 
         //–¢’…è

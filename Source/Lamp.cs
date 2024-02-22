@@ -20,10 +20,4 @@ public class Lamp : MonoBehaviour
     {
         SpriteRenderer = GetComponent<SpriteRenderer>();
     }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }

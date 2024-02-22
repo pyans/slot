@@ -4,11 +4,13 @@ using UnityEngine;
 
 public class ReelScript : MonoBehaviour
 {
-    public int reelnum;
-    public int reelpos = 0;
-    public int symbolsnum = 20;
-    float onestep;
+    public int reelnum;             //‰½”Ô–Ú‚ÌƒŠ[ƒ‹‚©
+    public int reelpos = 0;         //ƒŠ[ƒ‹‚Ì’Ê‰ßˆÊ’u
+    public int symbolsnum = 20;     //ƒŠ[ƒ‹‚Ì}•¿”
+    float onestep;                  //1}•¿•ª‚ÌŠp“x
+    //’â~—\’è
     public float stoprad;
+    public int stoppos;
 
     [SerializeField]
     float nowrotate = 0.0f;
@@ -21,6 +23,10 @@ public class ReelScript : MonoBehaviour
     private bool rollstate = false;
     private bool stopmode = false;
     private bool standbystop = false;
+
+    //Á“”ƒeƒXƒg
+    public bool isturnoff = false;
+    public ReelLight ReelLight;
 
     //enum RealID
     //{
@@ -62,9 +68,16 @@ public class ReelScript : MonoBehaviour
         rollstate = newstate;
     }
 
+    //‰ñ“·‰ñ“]’†ó‘Ô‚Ìæ“¾
     public bool GetRollState()
     {
         return rollstate;
+    }
+
+    //’â~‹–‰Âó‘Ô‚Ìæ“¾
+    public bool IsStopOK()
+    {
+        return standbystop;
     }
 
     public void PrepareForStop()
@@ -75,48 +88,15 @@ public class ReelScript : MonoBehaviour
         // ’â~ˆÊ’uŒˆ’è
         int slide = master.spDecide.decideStop(master.stoporder, reelpos, master.activeCondAppGroup);
         Debug.Log("reelpos:" + reelpos + "  Slide:" + slide);
-        stoprad = posculc(reelpos - slide) * onestep;
+        //’â~—\’èˆÊ’u‚ğİ’è
+        stoppos = posculc(reelpos - slide);
+        stoprad = stoppos * onestep;
     }
 
     //’â~‹–‰Â
     public void PermitStop()
     {
         standbystop = true;
-    }
-
-    public void PlayerAction()
-    {
-        if (standbystop)
-        {
-            //stop reel
-            switch (reelnum)
-            {
-                case 1:
-                    if (Input.GetKeyDown("z") || Input.GetButtonDown("Fire3"))
-                    {
-                        Debug.Log("1st Stop");
-                        master.InputOrder(1);
-                        PrepareForStop();
-                    }
-                    break;
-                case 2:
-                    if (Input.GetKeyDown("x") || Input.GetButtonDown("Fire2"))
-                    {
-                        Debug.Log("2nd Stop");
-                        master.InputOrder(2);
-                        PrepareForStop();
-                    }
-                    break;
-                case 3:
-                    if (Input.GetKeyDown("c") || Input.GetButtonDown("Fire1"))
-                    {
-                        Debug.Log("3rd Stop");
-                        master.InputOrder(3);
-                        PrepareForStop();
-                    }
-                    break;
-            }
-        }
     }
 
     // Update is called once per frame
@@ -150,7 +130,16 @@ public class ReelScript : MonoBehaviour
                 //’â~ƒtƒ‰ƒO‚ğİ’è
                 stopmode = false;
                 rollstate = false;
-            }else if (stoprad == 0 && nowrotate > 342)
+                //Á“”
+                if (isturnoff)
+                {
+                    ReelLight.turnOFF();
+                    isturnoff = false;
+                }
+                //SEÄ¶
+                master.SEControll(2);
+            }
+            else if (stoprad == 0 && nowrotate > 342)
             {
                 //’â~ˆÊ’u‚ª‚O‚Ìê‡
                 //’â~ˆÊ’u‚ğC³
@@ -162,10 +151,16 @@ public class ReelScript : MonoBehaviour
                 //’â~ƒtƒ‰ƒO‚ğİ’è
                 stopmode = false;
                 rollstate = false;
+                //Á“”
+                if (isturnoff)
+                {
+                    ReelLight.turnOFF();
+                    isturnoff = false;
+                }
+                //SEÄ¶
+                master.SEControll(2);
+
             }
         }
-
-        //ƒ{ƒ^ƒ“‘€ì
-        PlayerAction();
     }
 }
